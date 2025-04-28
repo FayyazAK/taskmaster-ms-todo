@@ -11,20 +11,6 @@ const corsConfig = require("./config/cors");
 const config = require("./config/env");
 const app = express();
 
-// SSL Redirect Middleware
-if (config.SSL.enabled) {
-  app.use((req, res, next) => {
-    if (!req.secure) {
-      const httpsUrl = `https://${req.headers.host.split(":")[0]}:${
-        config.SSL.port
-      }${req.url}`;
-      logger.info(`Redirecting to HTTPS: ${httpsUrl}`);
-      return res.redirect(301, httpsUrl);
-    }
-    next();
-  });
-}
-
 // Middleware
 app.use(cors(corsConfig));
 app.use(helmet());
@@ -37,11 +23,11 @@ app.use(cookieParser());
 app.use(responseHandler);
 
 // Routes
-app.use("/api", routes);
+app.use("/api/todo", routes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
-  return res.success(null, "Auth service is running", 200);
+  return res.success(null, "TODO service is running", 200);
 });
 
 // Error handler Middleware

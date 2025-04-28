@@ -59,4 +59,11 @@ const validateRequest = (req, res, next) => {
   next();
 };
 
-module.exports = { validateRequest };
+const authorizeAdmin = (req, res, next) => {
+  if (req.user.role !== "admin") {
+    return res.error(MSG.FORBIDDEN, STATUS.FORBIDDEN);
+  }
+  next();
+};
+
+module.exports = { validateRequest, authorizeAdmin };

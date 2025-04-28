@@ -1,16 +1,23 @@
-const User = require("../models/User");
-const logger = require("../utils/logger");
-
+const List = require("../models/List");
+const Priority = require("../models/Priority");
+const Task = require("../models/Task");
+const { redisClient } = require("../config/redis");
 async function initializeDatabase() {
   try {
-    // Create user table
-    await User.createTable();
+    // Create tables in the correct order to handle foreign key dependencies
+    await Priority.createTable();
+    await List.createTable();
+    await Task.createTable();
 
-    await User.initializeAdmin();
+    // Initialize priority levels
+    await Priority.initializePriorities();
+    console.log("Database initialized successfully!");
 
-    logger.info("Auth service database initialized successfully!");
+    // Test Redis connection
+    await redisClient.ping();
+    console.log("Redis connection successful!");
   } catch (error) {
-    logger.error("Error initializing database:", error);
+    console.error("Error initializing database:", error);
     throw error;
   }
 }

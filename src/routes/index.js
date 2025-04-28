@@ -1,12 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const userRoutes = require("./userRoutes");
+const { validateRequest, authorizeAdmin } = require("../middleware/auth");
 const adminRoutes = require("./adminRoutes");
-const authRoutes = require("./authRoutes");
-const { validateRequest } = require("../middleware/auth");
+const listRoutes = require("./listRoutes");
+const taskRoutes = require("./taskRoutes");
+const priorities = require("./priorityRoutes");
 
-router.use("/auth", authRoutes);
-router.use("/admin", validateRequest, adminRoutes);
-router.use("/user", validateRequest, userRoutes);
+router.use("/admin", validateRequest, authorizeAdmin, adminRoutes);
+router.use("/lists", validateRequest, listRoutes);
+router.use("/tasks", validateRequest, taskRoutes);
+router.use("/priorities", validateRequest, priorities);
 
 module.exports = router;
