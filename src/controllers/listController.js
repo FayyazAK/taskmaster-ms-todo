@@ -159,6 +159,9 @@ const deleteList = async (req, res, next) => {
 
 const deleteAllLists = async (req, res, next) => {
   try {
+    if (!req.user || !req.user.user_id) {
+      return res.error(MSG.UNAUTHORIZED, STATUS.UNAUTHORIZED);
+    }
     await List.deleteAllLists(req.user.user_id);
     return res.success(null, MSG.LISTS_DELETED, STATUS.OK);
   } catch (error) {
