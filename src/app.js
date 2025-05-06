@@ -8,7 +8,7 @@ const errorHandler = require("./middleware/errorHandler");
 const routes = require("./routes");
 const logger = require("./utils/logger");
 const corsConfig = require("./config/cors");
-const config = require("./config/env");
+// Initialize Express app
 const app = express();
 
 // Middleware
@@ -23,7 +23,7 @@ app.use(cookieParser());
 app.use(responseHandler);
 
 // Routes
-app.use("/api/todo", routes);
+app.use("/api", routes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {

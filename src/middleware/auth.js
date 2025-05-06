@@ -53,13 +53,14 @@ const validateRequest = (req, res, next) => {
   }
 
   logger.debug(
-    `Request validated for user ${req.user.user_id} with role ${req.user.role}`
+    `Request validated for user ${req.user.userId} with role ${req.user.role}`
   );
 
   next();
 };
 
 const authorizeAdmin = (req, res, next) => {
+  console.log(req.user);
   if (req.user.role !== "admin") {
     return res.error(MSG.FORBIDDEN, STATUS.FORBIDDEN);
   }

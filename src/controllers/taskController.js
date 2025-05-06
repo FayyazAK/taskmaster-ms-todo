@@ -1,5 +1,5 @@
-const Task = require("../models/Task");
-const List = require("../models/List");
+const TaskService = require("../services/taskService");
+const ListService = require("../services/listService");
 const STATUS = require("../utils/statusCodes");
 const MSG = require("../utils/messages");
 const {
@@ -58,22 +58,22 @@ const createTask = async (req, res, next) => {
     }
 
     // Check if list exists and belongs to user
-    const list = await List.getListById(parsedListId, req.user.user_id);
+    const list = await ListService.getListById(parsedListId, req.user.userId);
     if (!list) {
       return res.error(MSG.LIST_NOT_FOUND, STATUS.NOT_FOUND);
     }
 
     // Create task with optional fields defaulted if not provided
-    const insertId = await Task.create(
+    const taskId = await TaskService.create(
       parsedListId,
       title.trim(),
       description ? description.trim() : "",
       priority_id ? parseInt(priority_id) : 1,
       due_date || null,
-      req.user.user_id
+      req.user.userId
     );
 
-    const task = await Task.getTaskById(insertId, req.user.user_id);
+    const task = await TaskService.getTaskById(taskId, req.user.userId);
 
     return res.success(task, MSG.TASK_CREATED, STATUS.CREATED);
   } catch (error) {
@@ -93,7 +93,7 @@ const getTaskById = async (req, res, next) => {
       return res.error(MSG.INVALID_TASK_ID, STATUS.BAD_REQUEST);
     }
 
-    const task = await Task.getTaskById(parsedTaskId, req.user.user_id);
+    const task = await TaskService.getTaskById(parsedTaskId, req.user.userId);
     if (!task) {
       return res.error(MSG.TASK_NOT_FOUND, STATUS.NOT_FOUND);
     }
@@ -109,13 +109,13 @@ const getAllTasks = async (req, res, next) => {
     const { completed } = req.query;
     if (completed !== undefined) {
       const isCompleted = completed === "true";
-      const tasks = await Task.getAllTasksWithStatus(
-        req.user.user_id,
+      const tasks = await TaskService.getAllTasksWithStatus(
+        req.user.userId,
         isCompleted
       );
       return res.success(tasks, MSG.TASKS_RETRIEVED, STATUS.OK);
     }
-    const tasks = await Task.getAllTasks(req.user.user_id);
+    const tasks = await TaskService.getAllTasks(req.user.userId);
     return res.success(tasks, MSG.TASKS_RETRIEVED, STATUS.OK);
   } catch (error) {
     console.error("Error in getAllTasks:", error);
@@ -134,7 +134,7 @@ const deleteTask = async (req, res, next) => {
       return res.error(MSG.INVALID_TASK_ID, STATUS.BAD_REQUEST);
     }
 
-    const deleted = await Task.deleteTask(parsedTaskId, req.user.user_id);
+    const deleted = await TaskService.deleteTask(parsedTaskId, req.user.userId);
 
     if (!deleted) {
       return res.error(MSG.TASK_NOT_FOUND, STATUS.NOT_FOUND);
@@ -174,17 +174,17 @@ const updateTaskStatus = async (req, res, next) => {
 
     const isCompletedBoolean = parseIsCompleted(is_completed);
 
-    const updated = await Task.updateTaskStatus(
+    const updated = await TaskService.updateTaskStatus(
       parsedTaskId,
       isCompletedBoolean,
-      req.user.user_id
+      req.user.userId
     );
 
     if (!updated) {
       return res.error(MSG.TASK_NOT_FOUND, STATUS.NOT_FOUND);
     }
 
-    const task = await Task.getTaskById(parsedTaskId, req.user.user_id);
+    const task = await TaskService.getTaskById(parsedTaskId, req.user.userId);
 
     return res.success(task, MSG.TASK_STATUS_UPDATED, STATUS.OK);
   } catch (error) {
@@ -258,51 +258,29 @@ const updateTask = async (req, res, next) => {
         return res.error(isCompletedError.message, isCompletedError.status);
       }
     }
-    // Get existing task
-    const existingTask = await Task.getTaskById(parsedTaskId, req.user.user_id);
-    if (!existingTask) {
-      return res.error(MSG.TASK_NOT_FOUND, STATUS.NOT_FOUND);
-    }
 
-    // Prepare update data - only include fields that were provided in the request
+    // Prepare update data
     const updateData = {};
-
-    if (list_id !== undefined) updateData.list_id = parsedListId;
+    if (list_id !== undefined) updateData.listId = parsedListId;
     if (title !== undefined) updateData.title = title.trim();
-    if (description !== undefined)
-      updateData.description = description.trim() || "";
+    if (description !== undefined) updateData.description = description.trim();
     if (priority_id !== undefined)
-      updateData.priority_id = parseInt(priority_id);
-    if (due_date !== undefined) updateData.due_date = due_date;
-    if (is_completed !== undefined) {
-      updateData.is_completed = parseIsCompleted(is_completed);
-    }
+      updateData.priorityId = parseInt(priority_id);
+    if (due_date !== undefined) updateData.dueDate = due_date;
+    if (is_completed !== undefined)
+      updateData.isCompleted = parseIsCompleted(is_completed);
 
-    // Update the task
-    const updated = await Task.updateTask(
+    const updated = await TaskService.updateTask(
       parsedTaskId,
       updateData,
-      req.user.user_id
+      req.user.userId
     );
 
     if (!updated) {
-      return res.error(MSG.TASK_UPDATE_FAILED, STATUS.INTERNAL_SERVER_ERROR);
-    }
-
-    const updatedTask = await Task.getTaskById(parsedTaskId, req.user.user_id);
-
-    if (!updatedTask) {
       return res.error(MSG.TASK_NOT_FOUND, STATUS.NOT_FOUND);
     }
-    const listId = parsedListId || existingTask.list_id;
-    const isUpdated = await List.updateListTimestamp(listId, req.user.user_id);
-    if (!isUpdated) {
-      return res.error(
-        MSG.UPDATE_LIST_TIMESTAMP_FAILED,
-        STATUS.INTERNAL_SERVER_ERROR
-      );
-    }
-    const task = await Task.getTaskById(parsedTaskId, req.user.user_id);
+
+    const task = await TaskService.getTaskById(parsedTaskId, req.user.userId);
 
     return res.success(task, MSG.TASK_UPDATED, STATUS.OK);
   } catch (error) {

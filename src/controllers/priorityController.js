@@ -1,10 +1,11 @@
-const Priority = require("../models/Priority");
+const PriorityService = require("../services/priorityService");
 const STATUS = require("../utils/statusCodes");
 const MSG = require("../utils/messages");
+
 // Get all priority levels
 const getAllPriorities = async (req, res, next) => {
   try {
-    const priorities = await Priority.getPriorities();
+    const priorities = await PriorityService.getPriorities();
     return res.success(priorities, MSG.PRIORITIES_RETRIEVED, STATUS.OK);
   } catch (error) {
     console.error("Error in getAllPriorities:", error);
@@ -13,7 +14,6 @@ const getAllPriorities = async (req, res, next) => {
 };
 
 // Get priority by ID
-
 const getPriorityById = async (req, res, next) => {
   try {
     const { priority_id } = req.params;
@@ -25,7 +25,7 @@ const getPriorityById = async (req, res, next) => {
     }
 
     // Get priority
-    const priority = await Priority.getPriorityById(parsedPriorityId);
+    const priority = await PriorityService.getPriorityById(parsedPriorityId);
 
     if (!priority) {
       return res.error(MSG.PRIORITY_NOT_FOUND, STATUS.NOT_FOUND);
@@ -50,7 +50,7 @@ const getPriorityByLevel = async (req, res, next) => {
     }
 
     // Get priority
-    const priority = await Priority.getPriorityByLevel(parsedLevel);
+    const priority = await PriorityService.getPriorityByLevel(parsedLevel);
 
     if (!priority) {
       return res.error(MSG.PRIORITY_NOT_FOUND, STATUS.NOT_FOUND);
@@ -62,6 +62,7 @@ const getPriorityByLevel = async (req, res, next) => {
     return next(error);
   }
 };
+
 // Create a new priority (admin only)
 const createPriority = async (req, res, next) => {
   try {
@@ -82,15 +83,13 @@ const createPriority = async (req, res, next) => {
       return res.error(MSG.INVALID_PRIORITY_LEVEL, STATUS.BAD_REQUEST);
     }
 
-    // Check if level already exists
-    const levelExists = await Priority.checkLevelExists(parsedLevel);
-    if (levelExists) {
-      return res.error(MSG.PRIORITY_LEVEL_EXISTS, STATUS.CONFLICT);
-    }
-
     // Create priority
-    const priority_id = await Priority.createPriority(name.trim(), parsedLevel);
-    const priority = await Priority.getPriorityById(priority_id);
+    const priorityId = await PriorityService.createPriority(
+      name.trim(),
+      parsedLevel
+    );
+
+    const priority = await PriorityService.getPriorityById(priorityId);
 
     return res.success(priority, MSG.PRIORITY_CREATED, STATUS.CREATED);
   } catch (error) {
@@ -121,7 +120,9 @@ const updatePriority = async (req, res, next) => {
     }
 
     // Get existing priority
-    const existingPriority = await Priority.getPriorityById(parsedPriorityId);
+    const existingPriority = await PriorityService.getPriorityById(
+      parsedPriorityId
+    );
     if (!existingPriority) {
       return res.error(MSG.PRIORITY_NOT_FOUND, STATUS.NOT_FOUND);
     }
@@ -135,26 +136,17 @@ const updatePriority = async (req, res, next) => {
       return res.error(MSG.INVALID_PRIORITY_LEVEL, STATUS.BAD_REQUEST);
     }
 
-    // Check if new level already exists for a different priority
-    if (parsedLevel !== existingPriority.level) {
-      const levelExists = await Priority.checkLevelExists(
-        parsedLevel,
-        parsedPriorityId
-      );
-      if (levelExists) {
-        return res.error(MSG.PRIORITY_LEVEL_EXISTS, STATUS.CONFLICT);
-      }
-    }
-
     // Update priority
-    const success = await Priority.updatePriority(
+    const success = await PriorityService.updatePriority(
       parsedPriorityId,
       updatedName,
       parsedLevel
     );
 
     if (success) {
-      const updatedPriority = await Priority.getPriorityById(parsedPriorityId);
+      const updatedPriority = await PriorityService.getPriorityById(
+        parsedPriorityId
+      );
       return res.success(updatedPriority, MSG.PRIORITY_UPDATED, STATUS.OK);
     } else {
       return res.error(
@@ -182,14 +174,15 @@ const deletePriority = async (req, res, next) => {
     if (parsedPriorityId === 1) {
       return res.error(MSG.PRIORITY_DELETE_FAILED, STATUS.BAD_REQUEST);
     }
+
     // Check if priority exists
-    const priority = await Priority.getPriorityById(parsedPriorityId);
+    const priority = await PriorityService.getPriorityById(parsedPriorityId);
     if (!priority) {
       return res.error(MSG.PRIORITY_NOT_FOUND, STATUS.NOT_FOUND);
     }
 
     // Delete priority
-    const success = await Priority.deletePriority(parsedPriorityId);
+    const success = await PriorityService.deletePriority(parsedPriorityId);
 
     if (success) {
       return res.success(null, MSG.PRIORITY_DELETED, STATUS.OK);

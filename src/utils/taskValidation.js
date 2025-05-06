@@ -1,5 +1,5 @@
 const STATUS = require("./statusCodes");
-const Priority = require("../models/Priority");
+const PriorityService = require("../services/priorityService");
 const config = require("../config/env");
 const MSG = require("./messages");
 const validateTitle = (title) => {
@@ -43,7 +43,7 @@ const validatePriorityId = async (priorityId) => {
     };
   }
 
-  const priority = await Priority.getPriorityById(parsedPriorityId);
+  const priority = await PriorityService.getPriorityById(parsedPriorityId);
   if (!priority) {
     return {
       message: MSG.TASK_PRIORITY_ID_INVALID,
