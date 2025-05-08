@@ -10,7 +10,7 @@ const validateTitle = (title) => {
     };
   }
 
-  if (title.length > config.TASK_TITLE_MAX_LENGTH) {
+  if (title.length > config.task.titleMaxLength) {
     return {
       message: MSG.TASK_TITLE_LENGTH,
       status: STATUS.BAD_REQUEST,
@@ -21,7 +21,7 @@ const validateTitle = (title) => {
 };
 
 const validateDescription = (description) => {
-  if (description && description.length > config.TASK_DESCRIPTION_MAX_LENGTH) {
+  if (description && description.length > config.task.descriptionMaxLength) {
     return {
       message: MSG.TASK_DESCRIPTION_LENGTH,
       status: STATUS.BAD_REQUEST,
