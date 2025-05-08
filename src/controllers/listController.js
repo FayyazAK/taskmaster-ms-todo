@@ -1,5 +1,5 @@
 const config = require("../config/env");
-const List = require("../models/List");
+const ListService = require("../services/listService");
 const STATUS = require("../utils/statusCodes");
 const MSG = require("../utils/messages");
 
@@ -25,14 +25,13 @@ const createList = async (req, res, next) => {
       return res.error(MSG.LIST_TITLE_LENGTH, STATUS.BAD_REQUEST);
     }
 
-    const list_id = await List.create(
-      req.user.user_id,
+    const listId = await ListService.create(
+      req.user.userId,
       trimmedTitle,
-      description.trim()
+      description ? description.trim() : ""
     );
 
-    const list = await List.getListById(list_id, req.user.user_id);
-
+    const list = await ListService.getListById(listId, req.user.userId);
     res.success(list, MSG.LIST_CREATED, STATUS.CREATED);
   } catch (error) {
     console.error("Error in createList:", error.message);
@@ -45,8 +44,8 @@ const getUserLists = async (req, res, next) => {
     const { include_tasks } = req.query;
     const lists =
       include_tasks === "true"
-        ? await List.getListsWithTasks(req.user.user_id)
-        : await List.getLists(req.user.user_id);
+        ? await ListService.getListsWithTasks(req.user.userId)
+        : await ListService.getLists(req.user.userId);
     res.success(lists, MSG.LISTS_RETRIEVED, STATUS.OK);
   } catch (error) {
     console.error("Error in getUserLists:", error.message);
@@ -65,8 +64,11 @@ const getListById = async (req, res, next) => {
 
     const list =
       include_tasks === "true"
-        ? await List.getListByIdWithTasks(parseInt(list_id), req.user.user_id)
-        : await List.getListById(parseInt(list_id), req.user.user_id);
+        ? await ListService.getListByIdWithTasks(
+            parseInt(list_id),
+            req.user.userId
+          )
+        : await ListService.getListById(parseInt(list_id), req.user.userId);
 
     if (!list) {
       return res.error(MSG.LIST_NOT_FOUND, STATUS.NOT_FOUND);
@@ -119,9 +121,9 @@ const updateList = async (req, res, next) => {
     }
 
     // Update the list
-    const updatedList = await List.updateList(
+    const updatedList = await ListService.updateList(
       parseInt(list_id),
-      req.user.user_id,
+      req.user.userId,
       updateData
     );
 
@@ -144,7 +146,10 @@ const deleteList = async (req, res, next) => {
       return res.error(MSG.INVALID_LIST_ID, STATUS.BAD_REQUEST);
     }
 
-    const deleted = await List.deleteList(parseInt(list_id), req.user.user_id);
+    const deleted = await ListService.deleteList(
+      parseInt(list_id),
+      req.user.userId
+    );
 
     if (!deleted) {
       return res.error(MSG.LIST_NOT_FOUND, STATUS.NOT_FOUND);
@@ -159,7 +164,10 @@ const deleteList = async (req, res, next) => {
 
 const deleteAllLists = async (req, res, next) => {
   try {
-    await List.deleteAllLists(req.user.user_id);
+    if (!req.user || !req.user.userId) {
+      return res.error(MSG.UNAUTHORIZED, STATUS.UNAUTHORIZED);
+    }
+    await ListService.deleteAllLists(req.user.userId);
     return res.success(null, MSG.LISTS_DELETED, STATUS.OK);
   } catch (error) {
     console.error("Error in deleteAllLists:", error.message);
@@ -175,14 +183,17 @@ const cleanUpList = async (req, res, next) => {
       return res.error(MSG.INVALID_LIST_ID, STATUS.BAD_REQUEST);
     }
     //Check if the list exists
-    const list = await List.getListById(parseInt(list_id), req.user.user_id);
+    const list = await ListService.getListById(
+      parseInt(list_id),
+      req.user.userId
+    );
 
     //Check if the list belongs to the user
     if (!list) {
       return res.error(MSG.LIST_NOT_FOUND, STATUS.NOT_FOUND);
     }
 
-    await List.cleanUpList(parseInt(list_id));
+    await ListService.cleanUpList(parseInt(list_id));
 
     return res.success(null, MSG.LIST_CLEANED_UP, STATUS.OK);
   } catch (error) {
@@ -193,7 +204,7 @@ const cleanUpList = async (req, res, next) => {
 
 const cleanUpAllLists = async (req, res, next) => {
   try {
-    await List.cleanUpAllLists(req.user.user_id);
+    await ListService.cleanUpAllLists(req.user.userId);
     return res.success(null, MSG.LISTS_CLEANED_UP, STATUS.OK);
   } catch (error) {
     console.error("Error in cleanUpAllLists:", error.message);
