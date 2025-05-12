@@ -16,10 +16,10 @@ async function startServer() {
     // Create server based on configuration
     const server = createServer(app);
 
-    if (config.SSL.enabled) {
-      logger.info(`Todo service running on HTTPS port ${config.SSL.port}`);
+    if (config.ssl.enabled) {
+      logger.info(`Todo service running on HTTPS port ${config.ssl.port}`);
     } else {
-      logger.info(`Todo service running on HTTP port ${config.PORT}`);
+      logger.info(`Todo service running on HTTP port ${config.server.port}`);
     }
   } catch (error) {
     logger.error("Failed to start Todo service:", error);

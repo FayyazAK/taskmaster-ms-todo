@@ -2,12 +2,12 @@ const { Sequelize } = require("sequelize");
 const config = require("./env");
 
 const sequelize = new Sequelize(
-  config.DB_NAME,
-  config.DB_USER,
-  config.DB_PASSWORD,
+  config.db.name,
+  config.db.user,
+  config.db.password,
   {
-    host: config.DB_HOST,
-    port: config.DB_PORT,
+    host: config.db.host,
+    port: config.db.port,
     dialect: "mysql",
     logging: false,
     pool: {
