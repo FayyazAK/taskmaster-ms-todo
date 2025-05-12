@@ -19,6 +19,11 @@ const envSchema = Joi.object({
   DB_USER: Joi.string().default("root"),
   DB_PASSWORD: Joi.string().default("1234"),
   AUTH_DB_NAME: Joi.string().default("taskmaster-todo-db"),
+  DB_PORT: Joi.number().port().default(3306),
+
+  // BACKUP
+  BACKUP_DIR: Joi.string().default("./db_backups"),
+  BACKUP_RETENTION_DAYS: Joi.number().default(7),
 
   // JWT CONFIG
   JWT_SECRET: Joi.string().required(),
