@@ -4,6 +4,7 @@ const initializeDatabase = require("./src/config/db-init");
 const createServer = require("./src/config/server");
 const logger = require("./src/utils/logger");
 const { sequelize } = require("./src/models");
+const KafkaHandler = require("./src/services/kafkaHandler");
 async function startServer() {
   try {
     // Test database connection
@@ -12,6 +13,9 @@ async function startServer() {
 
     // Initialize database
     await initializeDatabase();
+
+    // Initialize Kafka handler
+    await KafkaHandler.initialize();
 
     // Create server based on configuration
     const server = createServer(app);

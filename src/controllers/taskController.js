@@ -10,6 +10,7 @@ const {
   validateIsCompleted,
   parseIsCompleted,
 } = require("../utils/taskValidation");
+const logger = require('../utils/logger');
 
 const createTask = async (req, res, next) => {
   try {
@@ -77,7 +78,7 @@ const createTask = async (req, res, next) => {
 
     return res.success(task, MSG.TASK_CREATED, STATUS.CREATED);
   } catch (error) {
-    console.error("Error in createTask:", error);
+    logger.error("Error in createTask:", error);
     next(error);
   }
 };
@@ -99,7 +100,7 @@ const getTaskById = async (req, res, next) => {
     }
     return res.success(task, MSG.TASK_RETRIEVED, STATUS.OK);
   } catch (error) {
-    console.error("Error in getTaskById:", error);
+    logger.error("Error in getTaskById:", error);
     next(error);
   }
 };
@@ -118,7 +119,7 @@ const getAllTasks = async (req, res, next) => {
     const tasks = await TaskService.getAllTasks(req.user.userId);
     return res.success(tasks, MSG.TASKS_RETRIEVED, STATUS.OK);
   } catch (error) {
-    console.error("Error in getAllTasks:", error);
+    logger.error("Error in getAllTasks:", error);
     next(error);
   }
 };
@@ -142,7 +143,7 @@ const deleteTask = async (req, res, next) => {
 
     return res.success(null, MSG.TASK_DELETED, STATUS.OK);
   } catch (error) {
-    console.error("Error in deleteTask:", error.message);
+    logger.error("Error in deleteTask:", error.message);
     return next(error);
   }
 };
@@ -188,7 +189,7 @@ const updateTaskStatus = async (req, res, next) => {
 
     return res.success(task, MSG.TASK_STATUS_UPDATED, STATUS.OK);
   } catch (error) {
-    console.error("Error in updateTaskStatus:", error.message);
+    logger.error("Error in updateTaskStatus:", error.message);
     return next(error);
   }
 };
@@ -284,7 +285,7 @@ const updateTask = async (req, res, next) => {
 
     return res.success(task, MSG.TASK_UPDATED, STATUS.OK);
   } catch (error) {
-    console.error("Error in updateTask:", error.message);
+    logger.error("Error in updateTask:", error.message);
     return next(error);
   }
 };

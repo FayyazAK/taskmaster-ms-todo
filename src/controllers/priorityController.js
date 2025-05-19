@@ -1,6 +1,7 @@
 const PriorityService = require("../services/priorityService");
 const STATUS = require("../utils/statusCodes");
 const MSG = require("../utils/messages");
+const logger = require('../utils/logger');
 
 // Get all priority levels
 const getAllPriorities = async (req, res, next) => {
@@ -8,7 +9,7 @@ const getAllPriorities = async (req, res, next) => {
     const priorities = await PriorityService.getPriorities();
     return res.success(priorities, MSG.PRIORITIES_RETRIEVED, STATUS.OK);
   } catch (error) {
-    console.error("Error in getAllPriorities:", error);
+    logger.error("Error in getAllPriorities:", error);
     return next(error);
   }
 };
@@ -33,7 +34,7 @@ const getPriorityById = async (req, res, next) => {
 
     return res.success(priority, MSG.PRIORITY_RETRIEVED, STATUS.OK);
   } catch (error) {
-    console.error("Error in getPriorityById:", error);
+    logger.error("Error in getPriorityById:", error);
     return next(error);
   }
 };
@@ -58,7 +59,7 @@ const getPriorityByLevel = async (req, res, next) => {
 
     return res.success(priority, MSG.PRIORITY_RETRIEVED, STATUS.OK);
   } catch (error) {
-    console.error("Error in getPriorityByLevel:", error);
+    logger.error("Error in getPriorityByLevel:", error);
     return next(error);
   }
 };
@@ -93,7 +94,7 @@ const createPriority = async (req, res, next) => {
 
     return res.success(priority, MSG.PRIORITY_CREATED, STATUS.CREATED);
   } catch (error) {
-    console.error("Error in createPriority:", error);
+    logger.error("Error in createPriority:", error);
     return next(error);
   }
 };
@@ -155,7 +156,7 @@ const updatePriority = async (req, res, next) => {
       );
     }
   } catch (error) {
-    console.error("Error in updatePriority:", error);
+    logger.error("Error in updatePriority:", error);
     return next(error);
   }
 };
@@ -193,7 +194,7 @@ const deletePriority = async (req, res, next) => {
       );
     }
   } catch (error) {
-    console.error("Error in deletePriority:", error);
+    logger.error("Error in deletePriority:", error);
     return next(error);
   }
 };

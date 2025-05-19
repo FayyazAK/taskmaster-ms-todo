@@ -1,6 +1,7 @@
 // config/redis.js
 const Redis = require("ioredis");
 const config = require("./env");
+const logger = require('../utils/logger');
 
 const redisClient = new Redis({
   host: config.redis.host || "localhost",
@@ -16,11 +17,11 @@ const redisClient = new Redis({
 });
 
 redisClient.on("connect", () => {
-  console.log("Connected to Redis server");
+  logger.info("Connected to Redis server");
 });
 
 redisClient.on("error", (err) => {
-  console.error("Redis connection error:", err);
+  logger.error("Redis connection error:", err);
 });
 
 // Cache helper functions
@@ -30,7 +31,7 @@ const cacheHelpers = {
       const data = await redisClient.get(key);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error(`Cache get error for key ${key}:`, error);
+      logger.error(`Cache get error for key ${key}:`, error);
       return null;
     }
   },
@@ -39,7 +40,7 @@ const cacheHelpers = {
     try {
       await redisClient.set(key, JSON.stringify(data), "EX", config.redis.ttl);
     } catch (error) {
-      console.error(`Cache set error for key ${key}:`, error);
+      logger.error(`Cache set error for key ${key}:`, error);
     }
   },
 
@@ -47,7 +48,7 @@ const cacheHelpers = {
     try {
       await redisClient.del(key);
     } catch (error) {
-      console.error(`Cache delete error for key ${key}:`, error);
+      logger.error(`Cache delete error for key ${key}:`, error);
     }
   },
 
@@ -64,7 +65,7 @@ const cacheHelpers = {
         await redisClient.del(keysWithoutPrefix);
       }
     } catch (error) {
-      console.error(
+      logger.error(
         `Cache delete by pattern error for pattern ${pattern}:`,
         error
       );
@@ -77,7 +78,7 @@ const cacheHelpers = {
       const pattern = `users:${userId}*`;
       await this.deleteByPattern(pattern);
     } catch (error) {
-      console.error(`Error deleting cache for user ${userId}:`, error);
+      logger.error(`Error deleting cache for user ${userId}:`, error);
     }
   },
 
@@ -85,7 +86,7 @@ const cacheHelpers = {
     try {
       await redisClient.flushdb();
     } catch (error) {
-      console.error("Cache clear error:", error);
+      logger.error("Cache clear error:", error);
     }
   },
 
@@ -100,9 +101,9 @@ const cacheHelpers = {
       for (const pattern of patterns) {
         await this.deleteByPattern(pattern);
       }
-      console.log("Successfully cleared all lists and tasks cache");
+      logger.info("Successfully cleared all lists and tasks cache");
     } catch (error) {
-      console.error("Error clearing all lists and tasks cache:", error);
+      logger.error("Error clearing all lists and tasks cache:", error);
     }
   },
 };

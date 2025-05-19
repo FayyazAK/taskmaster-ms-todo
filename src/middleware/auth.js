@@ -48,7 +48,7 @@ const validateRequest = (req, res, next) => {
 
   if (signature !== expectedSignature) {
     logger.error("Invalid request signature");
-    console.log(`Expected: ${expectedSignature}, Received: ${signature}`);
+    logger.info(`Expected: ${expectedSignature}, Received: ${signature}`);
     return res.error(MSG.FORBIDDEN, STATUS.FORBIDDEN);
   }
 
@@ -60,7 +60,7 @@ const validateRequest = (req, res, next) => {
 };
 
 const authorizeAdmin = (req, res, next) => {
-  console.log(req.user);
+  logger.info(req.user);
   if (req.user.role !== "admin") {
     return res.error(MSG.FORBIDDEN, STATUS.FORBIDDEN);
   }

@@ -77,4 +77,8 @@ module.exports = {
     titleMaxLength: env.TASK_TITLE_MAX_LENGTH,
     descriptionMaxLength: env.TASK_DESCRIPTION_MAX_LENGTH,
   },
+
+  kafka: {
+    brokers: env.KAFKA_BROKERS.split(","),
+  },
 };

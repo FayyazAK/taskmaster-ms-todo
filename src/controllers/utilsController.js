@@ -1,4 +1,5 @@
 const { backupDatabase } = require("../services/backupDb");
+const logger = require('../utils/logger');
 
 const utilsController = {
   backupDatabase: async (req, res) => {
@@ -10,7 +11,7 @@ const utilsController = {
         200
       );
     } catch (error) {
-      console.error("Backup failed:", error);
+      logger.error("Backup failed:", error);
       return res.error(
         "Failed to create database backup: " + error.message,
         500
