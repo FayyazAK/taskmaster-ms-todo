@@ -2,6 +2,7 @@ const config = require("../config/env");
 const ListService = require("../services/listService");
 const STATUS = require("../utils/statusCodes");
 const MSG = require("../utils/messages");
+const logger = require('../utils/logger');
 
 const createList = async (req, res, next) => {
   try {
@@ -34,7 +35,7 @@ const createList = async (req, res, next) => {
     const list = await ListService.getListById(listId, req.user.userId);
     res.success(list, MSG.LIST_CREATED, STATUS.CREATED);
   } catch (error) {
-    console.error("Error in createList:", error.message);
+    logger.error("Error in createList:", error.message);
     return next(error);
   }
 };
@@ -48,7 +49,7 @@ const getUserLists = async (req, res, next) => {
         : await ListService.getLists(req.user.userId);
     res.success(lists, MSG.LISTS_RETRIEVED, STATUS.OK);
   } catch (error) {
-    console.error("Error in getUserLists:", error.message);
+    logger.error("Error in getUserLists:", error.message);
     return next(error);
   }
 };
@@ -76,7 +77,7 @@ const getListById = async (req, res, next) => {
 
     return res.success(list, MSG.LIST_RETRIEVED, STATUS.OK);
   } catch (error) {
-    console.error("Error in getListById:", error.message);
+    logger.error("Error in getListById:", error.message);
     return next(error);
   }
 };
@@ -133,7 +134,7 @@ const updateList = async (req, res, next) => {
 
     return res.success(updatedList, MSG.LIST_UPDATED, STATUS.OK);
   } catch (error) {
-    console.error("Error in updateList:", error.message);
+    logger.error("Error in updateList:", error.message);
     return next(error);
   }
 };
@@ -157,7 +158,7 @@ const deleteList = async (req, res, next) => {
 
     return res.success(null, MSG.LIST_DELETED, STATUS.OK);
   } catch (error) {
-    console.error("Error in deleteList:", error.message);
+    logger.error("Error in deleteList:", error.message);
     return next(error);
   }
 };
@@ -170,7 +171,7 @@ const deleteAllLists = async (req, res, next) => {
     await ListService.deleteAllLists(req.user.userId);
     return res.success(null, MSG.LISTS_DELETED, STATUS.OK);
   } catch (error) {
-    console.error("Error in deleteAllLists:", error.message);
+    logger.error("Error in deleteAllLists:", error.message);
     return next(error);
   }
 };
@@ -197,7 +198,7 @@ const cleanUpList = async (req, res, next) => {
 
     return res.success(null, MSG.LIST_CLEANED_UP, STATUS.OK);
   } catch (error) {
-    console.error("Error in cleanUpList:", error.message);
+    logger.error("Error in cleanUpList:", error.message);
     return next(error);
   }
 };
@@ -207,7 +208,7 @@ const cleanUpAllLists = async (req, res, next) => {
     await ListService.cleanUpAllLists(req.user.userId);
     return res.success(null, MSG.LISTS_CLEANED_UP, STATUS.OK);
   } catch (error) {
-    console.error("Error in cleanUpAllLists:", error.message);
+    logger.error("Error in cleanUpAllLists:", error.message);
     return next(error);
   }
 };

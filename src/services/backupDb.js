@@ -5,6 +5,7 @@ const path = require("path");
 const fs = require("fs");
 const config = require("../config/env");
 const util = require("util");
+const logger = require('../utils/logger');
 
 const execPromise = util.promisify(exec);
 const { host, port, user, password, name } = config.db;
@@ -25,10 +26,10 @@ async function backupDatabase() {
 
     const cmd = `mysqldump --host=${host} --port=${port} --user=${user} --password=${password} ${name} | gzip > "${filepath}"`;
 
-    console.log(`[Backup] Starting dump at ${new Date().toISOString()}`);
+    logger.info(`[Backup] Starting dump at ${new Date().toISOString()}`);
 
     await execPromise(cmd);
-    console.log(`[Backup] Completed: ${filename}`);
+    logger.info(`[Backup] Completed: ${filename}`);
 
     // Verify the file was created
     if (!fs.existsSync(filepath)) {
@@ -40,7 +41,7 @@ async function backupDatabase() {
 
     return filepath;
   } catch (error) {
-    console.error("[Backup] ERROR:", error.message);
+    logger.error("[Backup] ERROR:", error.message);
     throw error;
   }
 }
@@ -56,11 +57,11 @@ async function rotateBackups() {
 
       if (stats.mtimeMs < cutoff) {
         await fs.promises.unlink(fullPath);
-        console.log(`[Rotate] Deleted old backup: ${file}`);
+        logger.info(`[Rotate] Deleted old backup: ${file}`);
       }
     }
   } catch (error) {
-    console.error("[Rotate] ERROR:", error);
+    logger.error("[Rotate] ERROR:", error);
     throw error;
   }
 }
@@ -72,7 +73,7 @@ cron.schedule(
     try {
       await backupDatabase();
     } catch (error) {
-      console.error("[Cron Backup] Failed:", error);
+      logger.error("[Cron Backup] Failed:", error);
     }
   },
   {

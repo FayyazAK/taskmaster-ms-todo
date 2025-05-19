@@ -1,5 +1,6 @@
 // config/validateEnv.js
 const Joi = require("joi");
+const logger = require('../utils/logger');
 
 const envSchema = Joi.object({
   NODE_ENV: Joi.string()
@@ -63,6 +64,8 @@ const envSchema = Joi.object({
   // TASK
   TASK_TITLE_MAX_LENGTH: Joi.number().default(100),
   TASK_DESCRIPTION_MAX_LENGTH: Joi.number().default(255),
+    // Kafka
+    KAFKA_BROKERS: Joi.string().default("localhost:9092"),
 })
   .unknown() // allow other vars
   .required();
@@ -74,15 +77,15 @@ function validateEnv(env = process.env) {
   });
 
   if (error) {
-    console.error(
+    logger.error(
       "\n❌ Environment validation error(s):\n" +
-        error.details.map((d) => ` • ${d.message}`).join("\n") +
-        "\n"
+      error.details.map((d) => ` • ${d.message}`).join("\n") +
+      "\n"
     );
     process.exit(1);
   }
-
-  return validated;
 }
 
-module.exports = validateEnv;
+module.exports = {
+  validateEnv,
+};
