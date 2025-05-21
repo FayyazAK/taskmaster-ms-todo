@@ -78,7 +78,7 @@ module.exports = {
     descriptionMaxLength: env.TASK_DESCRIPTION_MAX_LENGTH,
   },
 
-  kafka: {
-    brokers: env.KAFKA_BROKERS.split(","),
+  rabbitMQ: {
+    url: env.RABBITMQ_URL,
   },
 };

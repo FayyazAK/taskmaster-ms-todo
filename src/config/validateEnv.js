@@ -64,8 +64,10 @@ const envSchema = Joi.object({
   // TASK
   TASK_TITLE_MAX_LENGTH: Joi.number().default(100),
   TASK_DESCRIPTION_MAX_LENGTH: Joi.number().default(255),
-    // Kafka
-    KAFKA_BROKERS: Joi.string().default("localhost:9092"),
+
+  // RABBITMQ
+  RABBITMQ_URL: Joi.string().uri().default("amqp://localhost:5672"),
+
 })
   .unknown() // allow other vars
   .required();
@@ -84,8 +86,8 @@ function validateEnv(env = process.env) {
     );
     process.exit(1);
   }
+  
+  return validated;
 }
 
-module.exports = {
-  validateEnv,
-};
+module.exports = validateEnv;
