@@ -14,7 +14,7 @@ class ListService {
       // Invalidate user's list cache
       await cacheHelpers.del(keyGenerators.userLists(userId));
       await cacheHelpers.del(keyGenerators.userListsWithTasks(userId));
-      return list.listId;
+      return list._id;
     } catch (error) {
       logger.error("Error creating list:", error);
       throw error;
@@ -31,9 +31,7 @@ class ListService {
         return cachedLists;
       }
 
-      const lists = await List.findAll({
-        where: { userId },
-      });
+      const lists = await List.find({ userId });
 
       // Store in cache for future requests
       await cacheHelpers.set(cacheKey, lists);
@@ -55,19 +53,27 @@ class ListService {
         return cachedLists;
       }
 
-      const lists = await List.findAll({
-        where: { userId },
-        include: [
-          {
-            model: Task,
-          },
-        ],
-      });
+      const lists = await List.find({ userId });
+      
+      // Manually populate tasks for each list
+      const listsWithTasks = await Promise.all(
+        lists.map(async (list) => {
+          const tasks = await Task.find({ listId: list._id })
+            .populate({
+              path: 'priorityId',
+              select: 'name level'
+            });
+          return {
+            ...list.toObject(),
+            Tasks: tasks
+          };
+        })
+      );
 
       // Store in cache for future requests
-      await cacheHelpers.set(cacheKey, lists);
+      await cacheHelpers.set(cacheKey, listsWithTasks);
 
-      return lists;
+      return listsWithTasks;
     } catch (error) {
       logger.error("Error getting lists with tasks:", error);
       throw error;
@@ -84,9 +90,7 @@ class ListService {
         return cachedList;
       }
 
-      const list = await List.findOne({
-        where: { listId, userId },
-      });
+      const list = await List.findOne({ _id: listId, userId });
 
       if (list) {
         // Store in cache for future requests
@@ -110,18 +114,22 @@ class ListService {
         return cachedList;
       }
 
-      const list = await List.findOne({
-        where: { listId, userId },
-        include: [
-          {
-            model: Task,
-          },
-        ],
-      });
+      const list = await List.findOne({ _id: listId, userId });
 
       if (list) {
+        const tasks = await Task.find({ listId: list._id })
+          .populate({
+            path: 'priorityId',
+            select: 'name level'
+          });
+        const listWithTasks = {
+          ...list.toObject(),
+          Tasks: tasks
+        };
+        
         // Store in cache for future requests
-        await cacheHelpers.set(cacheKey, list);
+        await cacheHelpers.set(cacheKey, listWithTasks);
+        return listWithTasks;
       }
 
       return list;
@@ -133,15 +141,13 @@ class ListService {
 
   static async updateList(listId, userId, updateData) {
     try {
-      const list = await List.findOne({
-        where: { listId, userId },
-      });
+      const list = await List.findOne({ _id: listId, userId });
 
       if (!list) {
         return false;
       }
 
-      await list.update(updateData);
+      const updatedList = await List.findByIdAndUpdate(listId, updateData, { new: true });
 
       // Invalidate all affected caches
       await Promise.all([
@@ -151,7 +157,7 @@ class ListService {
         cacheHelpers.del(keyGenerators.userListsWithTasks(userId)),
       ]);
 
-      return list;
+      return updatedList;
     } catch (error) {
       logger.error("Error updating list:", error);
       throw error;
@@ -160,15 +166,13 @@ class ListService {
 
   static async deleteList(listId, userId) {
     try {
-      const list = await List.findOne({
-        where: { listId, userId },
-      });
+      const list = await List.findOne({ _id: listId, userId });
 
       if (!list) {
         return false;
       }
 
-      await list.destroy();
+      await List.findByIdAndDelete(listId);
 
       // Invalidate all affected caches
       await cacheHelpers.deleteUserCache(userId);
@@ -182,9 +186,7 @@ class ListService {
 
   static async deleteAllLists(userId) {
     try {
-      await List.destroy({
-        where: { userId },
-      });
+      await List.deleteMany({ userId });
 
       // Invalidate all user caches
       await cacheHelpers.deleteUserCache(userId);
@@ -198,17 +200,13 @@ class ListService {
 
   static async cleanUpList(listId, userId) {
     try {
-      const list = await List.findOne({
-        where: { listId, userId },
-      });
+      const list = await List.findOne({ _id: listId, userId });
 
       if (!list) {
         return false;
       }
 
-      await Task.destroy({
-        where: { listId },
-      });
+      await Task.deleteMany({ listId });
 
       await cacheHelpers.del(keyGenerators.list(listId, userId));
       await cacheHelpers.del(keyGenerators.listWithTasks(listId, userId));
@@ -225,23 +223,18 @@ class ListService {
   static async cleanUpAllLists(userId) {
     try {
       // Find all lists belonging to the user
-      const lists = await List.findAll({
-        where: { userId },
-        attributes: ["listId"],
-      });
+      const lists = await List.find({ userId }).select('_id');
 
       // Get all list IDs
-      const listIds = lists.map((list) => list.listId);
+      const listIds = lists.map((list) => list._id);
 
       if (listIds.length === 0) {
         return true;
       }
 
       // Delete all tasks associated with these lists
-      await Task.destroy({
-        where: {
-          listId: listIds,
-        },
+      await Task.deleteMany({
+        listId: { $in: listIds }
       });
 
       // Invalidate all user caches

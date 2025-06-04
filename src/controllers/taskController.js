@@ -10,6 +10,7 @@ const {
   validateIsCompleted,
   parseIsCompleted,
 } = require("../utils/taskValidation");
+const { validateObjectId } = require("../utils/validation");
 const logger = require('../utils/logger');
 
 const createTask = async (req, res, next) => {
@@ -21,15 +22,10 @@ const createTask = async (req, res, next) => {
 
     const { list_id, title, description, priority_id, due_date } = req.body;
 
-    // Validate required fields
-    if (!list_id) {
-      return res.error(MSG.LIST_ID_REQUIRED, STATUS.BAD_REQUEST);
-    }
-
-    // Parse list_id to ensure it's a number
-    const parsedListId = parseInt(list_id);
-    if (isNaN(parsedListId)) {
-      return res.error(MSG.INVALID_LIST_ID, STATUS.BAD_REQUEST);
+    // Validate list_id
+    const listIdError = validateObjectId(list_id, "List ID");
+    if (listIdError) {
+      return res.error(listIdError.message, listIdError.status);
     }
 
     // Validate title
@@ -44,10 +40,12 @@ const createTask = async (req, res, next) => {
       return res.error(descriptionError.message, descriptionError.status);
     }
 
-    // Validate priority
-    const priorityError = await validatePriorityId(priority_id);
-    if (priorityError) {
-      return res.error(priorityError.message, priorityError.status);
+    // Validate priority (only if provided)
+    if (priority_id) {
+      const priorityError = await validatePriorityId(priority_id);
+      if (priorityError) {
+        return res.error(priorityError.message, priorityError.status);
+      }
     }
 
     // Validate due date
@@ -59,17 +57,17 @@ const createTask = async (req, res, next) => {
     }
 
     // Check if list exists and belongs to user
-    const list = await ListService.getListById(parsedListId, req.user.userId);
+    const list = await ListService.getListById(list_id, req.user.userId);
     if (!list) {
       return res.error(MSG.LIST_NOT_FOUND, STATUS.NOT_FOUND);
     }
 
     // Create task with optional fields defaulted if not provided
     const taskId = await TaskService.create(
-      parsedListId,
+      list_id,
       title.trim(),
       description ? description.trim() : "",
-      priority_id ? parseInt(priority_id) : 1,
+      priority_id || null,
       due_date || null,
       req.user.userId
     );
@@ -87,14 +85,13 @@ const getTaskById = async (req, res, next) => {
   try {
     const { task_id } = req.params;
 
-    // Validate IDs
-    const parsedTaskId = parseInt(task_id);
-
-    if (isNaN(parsedTaskId)) {
-      return res.error(MSG.INVALID_TASK_ID, STATUS.BAD_REQUEST);
+    // Validate task_id
+    const taskIdError = validateObjectId(task_id, "Task ID");
+    if (taskIdError) {
+      return res.error(taskIdError.message, taskIdError.status);
     }
 
-    const task = await TaskService.getTaskById(parsedTaskId, req.user.userId);
+    const task = await TaskService.getTaskById(task_id, req.user.userId);
     if (!task) {
       return res.error(MSG.TASK_NOT_FOUND, STATUS.NOT_FOUND);
     }
@@ -128,14 +125,13 @@ const deleteTask = async (req, res, next) => {
   try {
     const { task_id } = req.params;
 
-    // Validate IDs
-    const parsedTaskId = parseInt(task_id);
-
-    if (isNaN(parsedTaskId)) {
-      return res.error(MSG.INVALID_TASK_ID, STATUS.BAD_REQUEST);
+    // Validate task_id
+    const taskIdError = validateObjectId(task_id, "Task ID");
+    if (taskIdError) {
+      return res.error(taskIdError.message, taskIdError.status);
     }
 
-    const deleted = await TaskService.deleteTask(parsedTaskId, req.user.userId);
+    const deleted = await TaskService.deleteTask(task_id, req.user.userId);
 
     if (!deleted) {
       return res.error(MSG.TASK_NOT_FOUND, STATUS.NOT_FOUND);
@@ -158,11 +154,10 @@ const updateTaskStatus = async (req, res, next) => {
 
     const { is_completed } = req.body;
 
-    // Validate parameters
-    const parsedTaskId = parseInt(task_id);
-
-    if (isNaN(parsedTaskId)) {
-      return res.error(MSG.INVALID_TASK_ID, STATUS.BAD_REQUEST);
+    // Validate task_id
+    const taskIdError = validateObjectId(task_id, "Task ID");
+    if (taskIdError) {
+      return res.error(taskIdError.message, taskIdError.status);
     }
 
     // Validate is_completed
@@ -176,7 +171,7 @@ const updateTaskStatus = async (req, res, next) => {
     const isCompletedBoolean = parseIsCompleted(is_completed);
 
     const updated = await TaskService.updateTaskStatus(
-      parsedTaskId,
+      task_id,
       isCompletedBoolean,
       req.user.userId
     );
@@ -185,7 +180,7 @@ const updateTaskStatus = async (req, res, next) => {
       return res.error(MSG.TASK_NOT_FOUND, STATUS.NOT_FOUND);
     }
 
-    const task = await TaskService.getTaskById(parsedTaskId, req.user.userId);
+    const task = await TaskService.getTaskById(task_id, req.user.userId);
 
     return res.success(task, MSG.TASK_STATUS_UPDATED, STATUS.OK);
   } catch (error) {
@@ -199,80 +194,67 @@ const updateTask = async (req, res, next) => {
     const { task_id } = req.params;
 
     if (!req.body) {
-      return res.error(MSG.TASK_UPDATE_FIELDS_REQUIRED, STATUS.BAD_REQUEST);
+      return res.error(MSG.INVALID_REQUEST, STATUS.BAD_REQUEST);
     }
 
-    const { list_id, title, description, priority_id, due_date, is_completed } =
-      req.body;
+    const { title, description, priority_id, due_date, list_id } = req.body;
 
-    // Validate IDs
-    const parsedTaskId = parseInt(task_id);
-
-    if (isNaN(parsedTaskId)) {
-      return res.error(MSG.INVALID_TASK_ID, STATUS.BAD_REQUEST);
+    // Validate task_id
+    const taskIdError = validateObjectId(task_id, "Task ID");
+    if (taskIdError) {
+      return res.error(taskIdError.message, taskIdError.status);
     }
 
-    // Check if at least one field to update is provided
-    if (Object.keys(req.body).length === 0) {
-      return res.error(MSG.TASK_UPDATE_FIELDS_REQUIRED, STATUS.BAD_REQUEST);
-    }
+    // Build updateData object for only provided fields
+    const updateData = {};
 
-    // Validate fields if provided
-    let parsedListId;
-    if (list_id !== undefined) {
-      parsedListId = parseInt(list_id);
-      if (isNaN(parsedListId)) {
-        return res.error(MSG.INVALID_LIST_ID, STATUS.BAD_REQUEST);
-      }
-    }
+    // Validate and add title if provided
     if (title !== undefined) {
       const titleError = validateTitle(title);
       if (titleError) {
         return res.error(titleError.message, titleError.status);
       }
+      updateData.title = title.trim();
     }
 
+    // Validate and add description if provided
     if (description !== undefined) {
       const descriptionError = validateDescription(description);
       if (descriptionError) {
         return res.error(descriptionError.message, descriptionError.status);
       }
+      updateData.description = description.trim();
     }
 
+    // Validate and add list_id if provided
+    if (list_id !== undefined) {
+      const listIdError = validateObjectId(list_id, "List ID");
+      if (listIdError) {
+        return res.error(listIdError.message, listIdError.status);
+      }
+      updateData.listId = list_id;
+    }
+
+    // Validate and add priority_id if provided
     if (priority_id !== undefined) {
       const priorityError = await validatePriorityId(priority_id);
       if (priorityError) {
         return res.error(priorityError.message, priorityError.status);
       }
+      updateData.priorityId = priority_id;
     }
 
+    // Validate and add due_date if provided
     if (due_date !== undefined) {
       const dueDateError = validateDueDate(due_date);
       if (dueDateError) {
         return res.error(dueDateError.message, dueDateError.status);
       }
+      updateData.dueDate = due_date;
     }
-
-    if (is_completed !== undefined) {
-      const isCompletedError = validateIsCompleted(is_completed);
-      if (isCompletedError) {
-        return res.error(isCompletedError.message, isCompletedError.status);
-      }
-    }
-
-    // Prepare update data
-    const updateData = {};
-    if (list_id !== undefined) updateData.listId = parsedListId;
-    if (title !== undefined) updateData.title = title.trim();
-    if (description !== undefined) updateData.description = description.trim();
-    if (priority_id !== undefined)
-      updateData.priorityId = parseInt(priority_id);
-    if (due_date !== undefined) updateData.dueDate = due_date;
-    if (is_completed !== undefined)
-      updateData.isCompleted = parseIsCompleted(is_completed);
 
     const updated = await TaskService.updateTask(
-      parsedTaskId,
+      task_id,
       updateData,
       req.user.userId
     );
@@ -281,11 +263,30 @@ const updateTask = async (req, res, next) => {
       return res.error(MSG.TASK_NOT_FOUND, STATUS.NOT_FOUND);
     }
 
-    const task = await TaskService.getTaskById(parsedTaskId, req.user.userId);
+    const task = await TaskService.getTaskById(task_id, req.user.userId);
 
     return res.success(task, MSG.TASK_UPDATED, STATUS.OK);
   } catch (error) {
     logger.error("Error in updateTask:", error.message);
+    return next(error);
+  }
+};
+
+const getTasksByListId = async (req, res, next) => {
+  try {
+    const { list_id } = req.params;
+
+    // Validate list_id
+    const listIdError = validateObjectId(list_id, "List ID");
+    if (listIdError) {
+      return res.error(listIdError.message, listIdError.status);
+    }
+
+    const tasks = await TaskService.getTasksByListId(list_id, req.user.userId);
+
+    return res.success(tasks, MSG.TASKS_RETRIEVED, STATUS.OK);
+  } catch (error) {
+    logger.error("Error in getTasksByListId:", error.message);
     return next(error);
   }
 };
@@ -297,4 +298,5 @@ module.exports = {
   deleteTask,
   updateTaskStatus,
   updateTask,
+  getTasksByListId,
 };

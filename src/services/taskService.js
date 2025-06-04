@@ -1,4 +1,4 @@
-const { Task, List } = require("../models");
+const { Task, List, Priority } = require("../models");
 const { cacheHelpers, keyGenerators } = require("../config/redis");
 const logger = require("../utils/logger");
 
@@ -7,18 +7,28 @@ class TaskService {
     try {
       // Verify list belongs to user
       const list = await List.findOne({
-        where: { listId, userId },
+        _id: listId,
+        userId: userId,
       });
 
       if (!list) {
         return false;
       }
 
+      // If no priorityId provided, get the default "Low" priority (level 1)
+      let finalPriorityId = priorityId;
+      if (!priorityId) {
+        const defaultPriority = await Priority.findOne({ level: 1 });
+        if (defaultPriority) {
+          finalPriorityId = defaultPriority._id;
+        }
+      }
+
       const task = await Task.create({
         listId,
         title,
         description,
-        priorityId,
+        priorityId: finalPriorityId,
         dueDate,
         isCompleted: false,
       });
@@ -26,7 +36,7 @@ class TaskService {
       // Invalidate all user caches
       await cacheHelpers.deleteUserCache(userId);
 
-      return task.taskId;
+      return task._id;
     } catch (error) {
       logger.error("Error creating task:", error);
       throw error;
@@ -35,22 +45,17 @@ class TaskService {
 
   static async updateTask(taskId, updateData, userId) {
     try {
-      const task = await Task.findOne({
-        include: [
-          {
-            model: List,
-            where: { userId },
-            attributes: ["listId", "title"],
-          },
-        ],
-        where: { taskId },
+      const task = await Task.findById(taskId).populate({
+        path: 'listId',
+        match: { userId: userId },
+        select: 'title'
       });
 
-      if (!task) {
+      if (!task || !task.listId) {
         return false;
       }
 
-      await task.update(updateData);
+      await Task.findByIdAndUpdate(taskId, updateData);
 
       // Invalidate all user caches
       await cacheHelpers.deleteUserCache(userId);
@@ -72,16 +77,21 @@ class TaskService {
         return cachedTasks;
       }
 
-      const tasks = await Task.findAll({
-        include: [
-          {
-            model: List,
-            where: { userId },
-            attributes: ["listId", "title"],
-          },
-        ],
-        where: { listId },
-      });
+      // First verify the list belongs to the user
+      const list = await List.findOne({ _id: listId, userId: userId });
+      if (!list) {
+        return [];
+      }
+
+      const tasks = await Task.find({ listId })
+        .populate({
+          path: 'listId',
+          select: 'title'
+        })
+        .populate({
+          path: 'priorityId',
+          select: 'name level'
+        });
 
       // Store in cache for future requests
       await cacheHelpers.set(cacheKey, tasks);
@@ -103,21 +113,23 @@ class TaskService {
         return cachedTask;
       }
 
-      const task = await Task.findOne({
-        include: [
-          {
-            model: List,
-            where: { userId },
-            attributes: ["listId", "title"],
-          },
-        ],
-        where: { taskId },
-      });
+      const task = await Task.findById(taskId)
+        .populate({
+          path: 'listId',
+          match: { userId: userId },
+          select: 'title'
+        })
+        .populate({
+          path: 'priorityId',
+          select: 'name level'
+        });
 
-      if (task) {
-        // Store in cache for future requests
-        await cacheHelpers.set(cacheKey, task);
+      if (!task || !task.listId) {
+        return null;
       }
+
+      // Store in cache for future requests
+      await cacheHelpers.set(cacheKey, task);
 
       return task;
     } catch (error) {
@@ -136,15 +148,19 @@ class TaskService {
         return cachedTasks;
       }
 
-      const tasks = await Task.findAll({
-        include: [
-          {
-            model: List,
-            where: { userId },
-            attributes: ["listId", "title"],
-          },
-        ],
-      });
+      // Get all lists for the user first
+      const userLists = await List.find({ userId }).select('_id');
+      const listIds = userLists.map(list => list._id);
+
+      const tasks = await Task.find({ listId: { $in: listIds } })
+        .populate({
+          path: 'listId',
+          select: 'title'
+        })
+        .populate({
+          path: 'priorityId',
+          select: 'name level'
+        });
 
       // Store in cache for future requests
       await cacheHelpers.set(cacheKey, tasks);
@@ -168,16 +184,22 @@ class TaskService {
         return cachedTasks;
       }
 
-      const tasks = await Task.findAll({
-        include: [
-          {
-            model: List,
-            where: { userId },
-            attributes: ["listId", "title"],
-          },
-        ],
-        where: { isCompleted },
-      });
+      // Get all lists for the user first
+      const userLists = await List.find({ userId }).select('_id');
+      const listIds = userLists.map(list => list._id);
+
+      const tasks = await Task.find({
+        listId: { $in: listIds },
+        isCompleted: isCompleted
+      })
+        .populate({
+          path: 'listId',
+          select: 'title'
+        })
+        .populate({
+          path: 'priorityId',
+          select: 'name level'
+        });
 
       // Store in cache for future requests
       await cacheHelpers.set(cacheKey, tasks);
@@ -191,22 +213,17 @@ class TaskService {
 
   static async deleteTask(taskId, userId) {
     try {
-      const task = await Task.findOne({
-        include: [
-          {
-            model: List,
-            where: { userId },
-            attributes: ["listId", "title"],
-          },
-        ],
-        where: { taskId },
+      const task = await Task.findById(taskId).populate({
+        path: 'listId',
+        match: { userId: userId },
+        select: 'title'
       });
 
-      if (!task) {
+      if (!task || !task.listId) {
         return false;
       }
 
-      await task.destroy();
+      await Task.findByIdAndDelete(taskId);
 
       // Invalidate all user caches
       await cacheHelpers.deleteUserCache(userId);
@@ -220,22 +237,17 @@ class TaskService {
 
   static async updateTaskStatus(taskId, isCompleted, userId) {
     try {
-      const task = await Task.findOne({
-        include: [
-          {
-            model: List,
-            where: { userId },
-            attributes: ["listId", "title"],
-          },
-        ],
-        where: { taskId },
+      const task = await Task.findById(taskId).populate({
+        path: 'listId',
+        match: { userId: userId },
+        select: 'title'
       });
 
-      if (!task) {
+      if (!task || !task.listId) {
         return false;
       }
 
-      await task.update({ isCompleted });
+      await Task.findByIdAndUpdate(taskId, { isCompleted });
 
       // Invalidate all user caches
       await cacheHelpers.deleteUserCache(userId);

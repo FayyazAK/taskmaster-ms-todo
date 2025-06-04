@@ -15,12 +15,9 @@ const envSchema = Joi.object({
   SYSTEM_TOKEN: Joi.string().default("taskmaster@system"),
   GATEWAY_URL: Joi.string().uri().default("https://localhost:4000"),
 
-  // MYSQL DATABASE CONNECTION
-  DB_HOST: Joi.string().default("localhost"),
-  DB_USER: Joi.string().default("root"),
-  DB_PASSWORD: Joi.string().default("1234"),
-  AUTH_DB_NAME: Joi.string().default("taskmaster-todo-db"),
-  DB_PORT: Joi.number().port().default(3306),
+  // MONGODB CONNECTION
+  MONGODB_URI: Joi.string().default("mongodb://localhost:27017"),
+  MONGODB_DB_NAME: Joi.string().default("taskmaster-todo-db"),
 
   // BACKUP
   BACKUP_DIR: Joi.string().default("./db_backups"),
@@ -84,8 +81,8 @@ function validateEnv(env = process.env) {
     );
     process.exit(1);
   }
+
+  return validated;
 }
 
-module.exports = {
-  validateEnv,
-};
+module.exports = validateEnv;

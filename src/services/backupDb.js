@@ -8,7 +8,7 @@ const util = require("util");
 const logger = require('../utils/logger');
 
 const execPromise = util.promisify(exec);
-const { host, port, user, password, name } = config.db;
+const { uri, name } = config.db;
 const { dir, retentionDays } = config.backup;
 
 if (!fs.existsSync(dir)) {
@@ -21,25 +21,25 @@ async function backupDatabase() {
       .toISOString()
       .replace(/[:.]/g, "-")
       .slice(0, 19);
-    const filename = `${name}-${timestamp}.sql.gz`;
-    const filepath = path.join(dir, filename);
+    const backupDir = path.join(dir, `${name}-${timestamp}`);
+    const archivePath = `${backupDir}.tar.gz`;
 
-    const cmd = `mysqldump --host=${host} --port=${port} --user=${user} --password=${password} ${name} | gzip > "${filepath}"`;
+    const cmd = `mongodump --uri="${uri}" --db="${name}" --out="${backupDir}" && tar -czf "${archivePath}" -C "${dir}" "${path.basename(backupDir)}" && rm -rf "${backupDir}"`;
 
-    logger.info(`[Backup] Starting dump at ${new Date().toISOString()}`);
+    logger.info(`[Backup] Starting MongoDB dump at ${new Date().toISOString()}`);
 
     await execPromise(cmd);
-    logger.info(`[Backup] Completed: ${filename}`);
+    logger.info(`[Backup] Completed: ${path.basename(archivePath)}`);
 
     // Verify the file was created
-    if (!fs.existsSync(filepath)) {
+    if (!fs.existsSync(archivePath)) {
       throw new Error("Backup file was not created");
     }
 
     // rotate old files
     await rotateBackups();
 
-    return filepath;
+    return archivePath;
   } catch (error) {
     logger.error("[Backup] ERROR:", error.message);
     throw error;

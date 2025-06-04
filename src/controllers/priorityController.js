@@ -1,6 +1,7 @@
 const PriorityService = require("../services/priorityService");
 const STATUS = require("../utils/statusCodes");
 const MSG = require("../utils/messages");
+const { validateObjectId } = require("../utils/validation");
 const logger = require('../utils/logger');
 
 // Get all priority levels
@@ -20,13 +21,13 @@ const getPriorityById = async (req, res, next) => {
     const { priority_id } = req.params;
 
     // Validate priority_id
-    const parsedPriorityId = parseInt(priority_id);
-    if (isNaN(parsedPriorityId)) {
-      return res.error(MSG.INVALID_PRIORITY_ID, STATUS.BAD_REQUEST);
+    const priorityIdError = validateObjectId(priority_id, "Priority ID");
+    if (priorityIdError) {
+      return res.error(priorityIdError.message, priorityIdError.status);
     }
 
     // Get priority
-    const priority = await PriorityService.getPriorityById(parsedPriorityId);
+    const priority = await PriorityService.getPriorityById(priority_id);
 
     if (!priority) {
       return res.error(MSG.PRIORITY_NOT_FOUND, STATUS.NOT_FOUND);
@@ -110,9 +111,9 @@ const updatePriority = async (req, res, next) => {
     const { name, level } = req.body;
 
     // Validate priority_id
-    const parsedPriorityId = parseInt(priority_id);
-    if (isNaN(parsedPriorityId)) {
-      return res.error(MSG.INVALID_PRIORITY_ID, STATUS.BAD_REQUEST);
+    const priorityIdError = validateObjectId(priority_id, "Priority ID");
+    if (priorityIdError) {
+      return res.error(priorityIdError.message, priorityIdError.status);
     }
 
     // Validate required fields
@@ -121,9 +122,7 @@ const updatePriority = async (req, res, next) => {
     }
 
     // Get existing priority
-    const existingPriority = await PriorityService.getPriorityById(
-      parsedPriorityId
-    );
+    const existingPriority = await PriorityService.getPriorityById(priority_id);
     if (!existingPriority) {
       return res.error(MSG.PRIORITY_NOT_FOUND, STATUS.NOT_FOUND);
     }
@@ -139,15 +138,13 @@ const updatePriority = async (req, res, next) => {
 
     // Update priority
     const success = await PriorityService.updatePriority(
-      parsedPriorityId,
+      priority_id,
       updatedName,
       parsedLevel
     );
 
     if (success) {
-      const updatedPriority = await PriorityService.getPriorityById(
-        parsedPriorityId
-      );
+      const updatedPriority = await PriorityService.getPriorityById(priority_id);
       return res.success(updatedPriority, MSG.PRIORITY_UPDATED, STATUS.OK);
     } else {
       return res.error(
@@ -167,23 +164,24 @@ const deletePriority = async (req, res, next) => {
     const { priority_id } = req.params;
 
     // Validate priority_id
-    const parsedPriorityId = parseInt(priority_id);
-    if (isNaN(parsedPriorityId)) {
-      return res.error(MSG.INVALID_PRIORITY_ID, STATUS.BAD_REQUEST);
-    }
-
-    if (parsedPriorityId === 1) {
-      return res.error(MSG.PRIORITY_DELETE_FAILED, STATUS.BAD_REQUEST);
+    const priorityIdError = validateObjectId(priority_id, "Priority ID");
+    if (priorityIdError) {
+      return res.error(priorityIdError.message, priorityIdError.status);
     }
 
     // Check if priority exists
-    const priority = await PriorityService.getPriorityById(parsedPriorityId);
+    const priority = await PriorityService.getPriorityById(priority_id);
     if (!priority) {
       return res.error(MSG.PRIORITY_NOT_FOUND, STATUS.NOT_FOUND);
     }
 
+    // Prevent deletion of Low priority (level 1) - find by level instead of hardcoded ID
+    if (priority.level === 1) {
+      return res.error(MSG.PRIORITY_DELETE_FAILED, STATUS.BAD_REQUEST);
+    }
+
     // Delete priority
-    const success = await PriorityService.deletePriority(parsedPriorityId);
+    const success = await PriorityService.deletePriority(priority_id);
 
     if (success) {
       return res.success(null, MSG.PRIORITY_DELETED, STATUS.OK);

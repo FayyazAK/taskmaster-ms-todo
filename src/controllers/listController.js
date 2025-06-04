@@ -1,8 +1,13 @@
-const config = require("../config/env");
 const ListService = require("../services/listService");
 const STATUS = require("../utils/statusCodes");
 const MSG = require("../utils/messages");
+const { validateObjectId } = require("../utils/validation");
 const logger = require('../utils/logger');
+
+// Constants for validation
+const LIST_TITLE_MIN_LENGTH = 3;
+const LIST_TITLE_MAX_LENGTH = 100;
+const LIST_DESCRIPTION_MAX_LENGTH = 255;
 
 const createList = async (req, res, next) => {
   try {
@@ -12,16 +17,15 @@ const createList = async (req, res, next) => {
 
     const { title, description } = req.body;
 
-    // Validate inputs
+    // Validate title
     if (!title || typeof title !== "string") {
       return res.error(MSG.LIST_TITLE_REQUIRED, STATUS.BAD_REQUEST);
     }
 
     const trimmedTitle = title.trim();
-
     if (
-      trimmedTitle.length < config.LIST_TITLE_MIN_LENGTH ||
-      trimmedTitle.length > config.LIST_TITLE_MAX_LENGTH
+      trimmedTitle.length < LIST_TITLE_MIN_LENGTH ||
+      trimmedTitle.length > LIST_TITLE_MAX_LENGTH
     ) {
       return res.error(MSG.LIST_TITLE_LENGTH, STATUS.BAD_REQUEST);
     }
@@ -59,17 +63,16 @@ const getListById = async (req, res, next) => {
     const { list_id } = req.params;
     const { include_tasks } = req.query;
 
-    if (!list_id || isNaN(parseInt(list_id))) {
-      return res.error(MSG.INVALID_LIST_ID, STATUS.BAD_REQUEST);
+    // Validate list_id
+    const listIdError = validateObjectId(list_id, "List ID");
+    if (listIdError) {
+      return res.error(listIdError.message, listIdError.status);
     }
 
     const list =
       include_tasks === "true"
-        ? await ListService.getListByIdWithTasks(
-            parseInt(list_id),
-            req.user.userId
-          )
-        : await ListService.getListById(parseInt(list_id), req.user.userId);
+        ? await ListService.getListByIdWithTasks(list_id, req.user.userId)
+        : await ListService.getListById(list_id, req.user.userId);
 
     if (!list) {
       return res.error(MSG.LIST_NOT_FOUND, STATUS.NOT_FOUND);
@@ -87,8 +90,10 @@ const updateList = async (req, res, next) => {
     const { list_id } = req.params;
     const { title, description } = req.body;
 
-    if (!list_id || isNaN(parseInt(list_id))) {
-      return res.error(MSG.INVALID_LIST_ID, STATUS.BAD_REQUEST);
+    // Validate list_id
+    const listIdError = validateObjectId(list_id, "List ID");
+    if (listIdError) {
+      return res.error(listIdError.message, listIdError.status);
     }
 
     if (!title && !description) {
@@ -102,8 +107,8 @@ const updateList = async (req, res, next) => {
       const trimmedTitle = title.trim();
       if (
         typeof title !== "string" ||
-        trimmedTitle.length < config.LIST_TITLE_MIN_LENGTH ||
-        trimmedTitle.length > config.LIST_TITLE_MAX_LENGTH
+        trimmedTitle.length < LIST_TITLE_MIN_LENGTH ||
+        trimmedTitle.length > LIST_TITLE_MAX_LENGTH
       ) {
         return res.error(MSG.LIST_TITLE_LENGTH, STATUS.BAD_REQUEST);
       }
@@ -114,7 +119,7 @@ const updateList = async (req, res, next) => {
       const trimmedDescription = description.trim();
       if (
         typeof description !== "string" ||
-        trimmedDescription.length > config.LIST_DESCRIPTION_MAX_LENGTH
+        trimmedDescription.length > LIST_DESCRIPTION_MAX_LENGTH
       ) {
         return res.error(MSG.LIST_DESCRIPTION_LENGTH, STATUS.BAD_REQUEST);
       }
@@ -123,7 +128,7 @@ const updateList = async (req, res, next) => {
 
     // Update the list
     const updatedList = await ListService.updateList(
-      parseInt(list_id),
+      list_id,
       req.user.userId,
       updateData
     );
@@ -143,14 +148,13 @@ const deleteList = async (req, res, next) => {
   try {
     const { list_id } = req.params;
 
-    if (!list_id || isNaN(parseInt(list_id))) {
-      return res.error(MSG.INVALID_LIST_ID, STATUS.BAD_REQUEST);
+    // Validate list_id
+    const listIdError = validateObjectId(list_id, "List ID");
+    if (listIdError) {
+      return res.error(listIdError.message, listIdError.status);
     }
 
-    const deleted = await ListService.deleteList(
-      parseInt(list_id),
-      req.user.userId
-    );
+    const deleted = await ListService.deleteList(list_id, req.user.userId);
 
     if (!deleted) {
       return res.error(MSG.LIST_NOT_FOUND, STATUS.NOT_FOUND);
@@ -180,21 +184,21 @@ const cleanUpList = async (req, res, next) => {
   try {
     const { list_id } = req.params;
 
-    if (!list_id || isNaN(parseInt(list_id))) {
-      return res.error(MSG.INVALID_LIST_ID, STATUS.BAD_REQUEST);
+    // Validate list_id
+    const listIdError = validateObjectId(list_id, "List ID");
+    if (listIdError) {
+      return res.error(listIdError.message, listIdError.status);
     }
+
     //Check if the list exists
-    const list = await ListService.getListById(
-      parseInt(list_id),
-      req.user.userId
-    );
+    const list = await ListService.getListById(list_id, req.user.userId);
 
     //Check if the list belongs to the user
     if (!list) {
       return res.error(MSG.LIST_NOT_FOUND, STATUS.NOT_FOUND);
     }
 
-    await ListService.cleanUpList(parseInt(list_id));
+    await ListService.cleanUpList(list_id, req.user.userId);
 
     return res.success(null, MSG.LIST_CLEANED_UP, STATUS.OK);
   } catch (error) {

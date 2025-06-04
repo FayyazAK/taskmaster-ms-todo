@@ -1,46 +1,25 @@
-const { DataTypes } = require("sequelize");
+const mongoose = require("mongoose");
 
-module.exports = (sequelize) => {
-  const List = sequelize.define(
-    "List",
-    {
-      listId: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-        field: "list_id",
-      },
-      userId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        field: "user_id",
-      },
-      title: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-      },
-      description: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
-    },
-    {
-      tableName: "lists",
-      timestamps: true,
-      createdAt: "created_at",
-      updatedAt: "updated_at",
-      indexes: [
-        {
-          name: "idx_list_user_id",
-          fields: ["user_id"],
-        },
-        {
-          name: "idx_list_created_at",
-          fields: ["created_at"],
-        },
-      ],
-    }
-  );
+const listSchema = new mongoose.Schema({
+  userId: {
+    type: String,
+    required: true
+  },
+  title: {
+    type: String,
+    required: true,
+    maxlength: 100
+  },
+  description: {
+    type: String,
+    required: false
+  }
+}, {
+  timestamps: true
+});
 
-  return List;
-};
+// Create indexes
+listSchema.index({ userId: 1 });
+listSchema.index({ createdAt: 1 });
+
+module.exports = mongoose.model("List", listSchema);

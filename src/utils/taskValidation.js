@@ -2,6 +2,8 @@ const STATUS = require("./statusCodes");
 const PriorityService = require("../services/priorityService");
 const config = require("../config/env");
 const MSG = require("./messages");
+const mongoose = require("mongoose");
+
 const validateTitle = (title) => {
   if (!title || title.trim() === "") {
     return {
@@ -35,15 +37,15 @@ const validatePriorityId = async (priorityId) => {
     return null;
   }
 
-  const parsedPriorityId = parseInt(priorityId);
-  if (isNaN(parsedPriorityId)) {
+  // Check if it's a valid MongoDB ObjectId
+  if (!mongoose.Types.ObjectId.isValid(priorityId)) {
     return {
       message: MSG.TASK_PRIORITY_ID_INVALID,
       status: STATUS.BAD_REQUEST,
     };
   }
 
-  const priority = await PriorityService.getPriorityById(parsedPriorityId);
+  const priority = await PriorityService.getPriorityById(priorityId);
   if (!priority) {
     return {
       message: MSG.TASK_PRIORITY_ID_INVALID,

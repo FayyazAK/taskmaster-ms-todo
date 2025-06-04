@@ -12,9 +12,13 @@ class PriorityService {
         { name: "Urgent", level: 4 },
       ];
 
-      await Priority.bulkCreate(defaultPriorities, {
-        ignoreDuplicates: true,
-      });
+      for (const priority of defaultPriorities) {
+        await Priority.findOneAndUpdate(
+          { level: priority.level },
+          priority,
+          { upsert: true, new: true }
+        );
+      }
 
       logger.info("Priority levels initialized successfully");
     } catch (error) {
@@ -33,9 +37,7 @@ class PriorityService {
         return cachedPriorities;
       }
 
-      const priorities = await Priority.findAll({
-        order: [["level", "ASC"]],
-      });
+      const priorities = await Priority.find({}).sort({ level: 1 });
 
       // Store in cache for future requests
       await cacheHelpers.set(cacheKey, priorities);
@@ -57,7 +59,7 @@ class PriorityService {
         return cachedPriority;
       }
 
-      const priority = await Priority.findByPk(priorityId);
+      const priority = await Priority.findById(priorityId);
 
       if (priority) {
         // Store in cache for future requests
@@ -73,9 +75,7 @@ class PriorityService {
 
   static async getPriorityByLevel(level) {
     try {
-      const priority = await Priority.findOne({
-        where: { level },
-      });
+      const priority = await Priority.findOne({ level });
 
       return priority;
     } catch (error) {
@@ -103,7 +103,7 @@ class PriorityService {
         cacheHelpers.clearAllListsAndTasks(),
       ]);
 
-      return priority.priorityId;
+      return priority._id;
     } catch (error) {
       logger.error("Error creating priority:", error);
       throw error;
@@ -112,7 +112,7 @@ class PriorityService {
 
   static async updatePriority(priorityId, name, level) {
     try {
-      const priority = await Priority.findByPk(priorityId);
+      const priority = await Priority.findById(priorityId);
       if (!priority) {
         throw new Error("Priority not found");
       }
@@ -125,7 +125,7 @@ class PriorityService {
         }
       }
 
-      await priority.update({
+      await Priority.findByIdAndUpdate(priorityId, {
         name,
         level,
       });
@@ -146,12 +146,12 @@ class PriorityService {
 
   static async deletePriority(priorityId) {
     try {
-      const priority = await Priority.findByPk(priorityId);
+      const priority = await Priority.findById(priorityId);
       if (!priority) {
         throw new Error("Priority not found");
       }
 
-      await priority.destroy();
+      await Priority.findByIdAndDelete(priorityId);
 
       // Invalidate all caches for priorities and all user caches
       await Promise.all([
