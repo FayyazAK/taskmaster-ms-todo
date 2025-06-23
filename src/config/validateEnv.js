@@ -1,6 +1,5 @@
 // config/validateEnv.js
 const Joi = require("joi");
-const logger = require('../utils/logger');
 
 const envSchema = Joi.object({
   NODE_ENV: Joi.string()
@@ -13,7 +12,7 @@ const envSchema = Joi.object({
   // GATEWAY
   API_GATEWAY_SIGNATURE: Joi.string().default("taskmaster@gateway"),
   SYSTEM_TOKEN: Joi.string().default("taskmaster@system"),
-  GATEWAY_URL: Joi.string().uri().default("https://localhost:4000"),
+  GATEWAY_URL: Joi.string().default("http://localhost:4000"),
 
   // MYSQL DATABASE CONNECTION
   DB_HOST: Joi.string().default("localhost"),
@@ -77,15 +76,14 @@ function validateEnv(env = process.env) {
   });
 
   if (error) {
-    logger.error(
+    console.error(
       "\n❌ Environment validation error(s):\n" +
       error.details.map((d) => ` • ${d.message}`).join("\n") +
       "\n"
     );
     process.exit(1);
   }
+  return validated;
 }
 
-module.exports = {
-  validateEnv,
-};
+module.exports = validateEnv;

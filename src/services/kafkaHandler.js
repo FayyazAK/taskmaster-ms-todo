@@ -22,7 +22,6 @@ class KafkaHandler {
       await kafkaConsumer.subscribe("user.delete", async (payload) => {
         await this.handleDeleteUserData(payload);
       });
-      logger.info("Kafka handler initialized successfully");
     } catch (error) {
       logger.error(MSG.SERVICE_UNAVAILABLE, error);
     }
